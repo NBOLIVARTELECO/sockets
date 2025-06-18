@@ -1,7 +1,12 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Servidor de Comunicación por Sockets
+ * 
+ * Esta clase implementa el servidor de la aplicación de comunicación por sockets.
+ * Proporciona una interfaz gráfica para recibir y mostrar mensajes del cliente.
+ * 
+ * @author nestor
+ * @version 1.0
+ * @since 2024
  */
 package socket;
 
@@ -13,18 +18,45 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *Indenficar los puertos disponibles
- * Establecer el servidor en un equipo y el cliente en otro
- * Modificar el script para generar un chat 
+ * Servidor de comunicación por sockets con interfaz gráfica Swing.
+ * 
+ * Esta clase extiende JFrame para proporcionar una interfaz gráfica que permite
+ * recibir y mostrar mensajes de texto de los clientes a través de sockets TCP.
+ * 
  * @author nestor
+ * @version 1.0
  */
 public class socket2 extends javax.swing.JFrame {
 
+    // Constantes de configuración
+    private static final int SERVER_PORT = 9999;
+    private static final String WINDOW_TITLE = "Servidor de Sockets";
+    private static final String INITIAL_MESSAGE = "Servidor iniciado. Esperando conexiones en puerto " + SERVER_PORT + "...";
+    
+    // Variables de instancia
     public static ServerSocket server;
+    private static final Logger LOGGER = Logger.getLogger(socket2.class.getName());
+    
+    /**
+     * Constructor de la clase servidor.
+     * 
+     * Inicializa la interfaz gráfica, hace visible la ventana y
+     * inicia el proceso de escucha de conexiones.
+     */
     public socket2() {
         initComponents();
+        this.setTitle(WINDOW_TITLE);
         this.setVisible(true);
-        this.conexion();
+        
+        // Mostrar mensaje inicial
+        jTextArea1.setText(INITIAL_MESSAGE);
+        
+        // Iniciar el proceso de escucha en un hilo separado
+        Thread serverThread = new Thread(this::conexion);
+        serverThread.setDaemon(true);
+        serverThread.start();
+        
+        LOGGER.info("Servidor iniciado correctamente en puerto " + SERVER_PORT);
     }
 
     /**
@@ -67,56 +99,82 @@ public class socket2 extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     /**
-     * @param args the command line arguments
+     * Método principal para ejecutar el servidor de forma independiente.
+     * 
+     * @param args Argumentos de línea de comandos (no utilizados)
      */
     public static void main(String args[]) {
-
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new socket2().setVisible(true);
-                jTextArea1.setText("Esperando..");
-               
-                //while(true){
-                //conexion();
-                try {
-                        server = new ServerSocket(9999);
-                        Socket socket = server.accept();
-                        System.out.println("Recibiendo info");
-                        DataInputStream flujo = new DataInputStream(socket.getInputStream());
-
-                        String texto = flujo.readUTF();
-                        jTextArea1.setText("\n" + texto);
-
-                        server.close();
-                    } catch (IOException ex) {
-                        Logger.getLogger(socket2.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-               // }
             }
         });
     }
 
-    public static void conexion() {
-
+    /**
+     * Método que maneja la conexión y recepción de mensajes del cliente.
+     * 
+     * Este método se ejecuta en un bucle infinito, esperando conexiones
+     * de clientes y procesando los mensajes recibidos.
+     */
+    public void conexion() {
         while (true) {
+            Socket socket = null;
+            DataInputStream flujo = null;
+            
             try {
-                server = new ServerSocket(9999);
-
-                Socket socket = server.accept();
-                DataInputStream flujo = new DataInputStream(socket.getInputStream());
-
+                LOGGER.info("Esperando conexión de cliente...");
+                server = new ServerSocket(SERVER_PORT);
+                
+                // Aceptar conexión del cliente
+                socket = server.accept();
+                LOGGER.info("Cliente conectado desde: " + socket.getInetAddress().getHostAddress());
+                
+                // Crear flujo de entrada para recibir datos
+                flujo = new DataInputStream(socket.getInputStream());
+                
+                // Leer el mensaje del cliente
                 String texto = flujo.readUTF();
-                jTextArea1.append("\n" + texto);
-
-                server.close();
+                LOGGER.info("Mensaje recibido: " + texto);
+                
+                // Mostrar el mensaje en la interfaz gráfica
+                final String mensajeCompleto = "\n[" + java.time.LocalTime.now() + "] Cliente: " + texto;
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    jTextArea1.append(mensajeCompleto);
+                    // Auto-scroll al final del texto
+                    jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
+                });
+                
             } catch (IOException ex) {
-                Logger.getLogger(socket2.class.getName()).log(Level.SEVERE, null, ex);
+                LOGGER.log(Level.SEVERE, "Error en la conexión del servidor", ex);
+                System.err.println("Error de servidor: " + ex.getMessage());
+            } finally {
+                // Cerrar recursos de manera segura
+                try {
+                    if (flujo != null) {
+                        flujo.close();
+                    }
+                    if (socket != null) {
+                        socket.close();
+                    }
+                    if (server != null) {
+                        server.close();
+                    }
+                } catch (IOException ex) {
+                    LOGGER.log(Level.WARNING, "Error al cerrar conexión del servidor", ex);
+                }
             }
-
-            //UDP,
-            //Chat bidireccional
+            
+            // Pequeña pausa antes de la siguiente iteración
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                LOGGER.warning("Hilo del servidor interrumpido");
+                break;
+            }
         }
     }
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JScrollPane jScrollPane1;
     private static javax.swing.JTextArea jTextArea1;

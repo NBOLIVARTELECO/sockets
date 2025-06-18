@@ -1,7 +1,12 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Cliente de Comunicación por Sockets
+ * 
+ * Esta clase implementa el cliente de la aplicación de comunicación por sockets.
+ * Proporciona una interfaz gráfica para enviar mensajes al servidor.
+ * 
+ * @author nestor
+ * @version 1.0
+ * @since 2024
  */
 package socket;
 
@@ -12,17 +17,34 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Cliente de comunicación por sockets con interfaz gráfica Swing.
+ * 
+ * Esta clase extiende JFrame para proporcionar una interfaz gráfica que permite
+ * al usuario enviar mensajes de texto al servidor a través de sockets TCP.
+ * 
  * @author nestor
+ * @version 1.0
  */
 public class socket1 extends javax.swing.JFrame {
 
-   // static socket2 ventana = new socket2();
+    // Constantes de configuración
+    private static final String SERVER_HOST = "127.0.0.1";
+    private static final int SERVER_PORT = 9999;
+    private static final String WINDOW_TITLE = "Cliente de Sockets";
+    
+    // Logger para el manejo de errores
+    private static final Logger LOGGER = Logger.getLogger(socket1.class.getName());
+
+    /**
+     * Constructor de la clase cliente.
+     * 
+     * Inicializa la interfaz gráfica y hace visible la ventana.
+     */
     public socket1() {
         initComponents();
+        this.setTitle(WINDOW_TITLE);
         this.setVisible(true);
-
-        
+        LOGGER.info("Cliente iniciado correctamente");
     }
 
     /**
@@ -81,22 +103,52 @@ public class socket1 extends javax.swing.JFrame {
 
     private void botonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_botonActionPerformed
         
-        System.out.println("Empezando transmisión");
-         
-        try {
-           // Socket conexion = new Socket("10.203.187.10", 8441);
-            Socket conexion = new Socket("127.0.0.1", 9999);
-            DataOutputStream flujo = new DataOutputStream(conexion.getOutputStream());
-            flujo.writeUTF(texto.getText());
-        //Mqtt, COap,zmq 
-        // metodos para la transmision de multimedia
-            flujo.close();
-        } catch (IOException ex) {
-            Logger.getLogger(socket1.class.getName()).log(Level.SEVERE, null, ex);
-        }finally{
+        String mensaje = texto.getText().trim();
         
-        }           
-            System.out.println("Mensaje enviado");
+        // Validar que el mensaje no esté vacío
+        if (mensaje.isEmpty()) {
+            LOGGER.warning("Intento de enviar mensaje vacío");
+            return;
+        }
+        
+        System.out.println("Empezando transmisión del mensaje: " + mensaje);
+         
+        Socket conexion = null;
+        DataOutputStream flujo = null;
+        
+        try {
+            // Establecer conexión con el servidor
+            LOGGER.info("Conectando al servidor " + SERVER_HOST + ":" + SERVER_PORT);
+            conexion = new Socket(SERVER_HOST, SERVER_PORT);
+            
+            // Crear flujo de salida para enviar datos
+            flujo = new DataOutputStream(conexion.getOutputStream());
+            
+            // Enviar el mensaje
+            flujo.writeUTF(mensaje);
+            LOGGER.info("Mensaje enviado exitosamente");
+            
+            // Limpiar el campo de texto después del envío
+            texto.setText("");
+            
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Error al enviar mensaje al servidor", ex);
+            System.err.println("Error de conexión: " + ex.getMessage());
+        } finally {
+            // Cerrar recursos de manera segura
+            try {
+                if (flujo != null) {
+                    flujo.close();
+                }
+                if (conexion != null) {
+                    conexion.close();
+                }
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "Error al cerrar conexión", ex);
+            }
+        }
+        
+        System.out.println("Proceso de envío completado");
       
     }//GEN-LAST:event_botonActionPerformed
 
